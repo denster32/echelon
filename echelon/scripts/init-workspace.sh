@@ -66,7 +66,8 @@ echo "  ✓ ACTIVITY.md (rolling activity log)"
 cp "$TEMPLATES_DIR/prompts/analyst.md" ./prompts/analyst.template.md
 cp "$TEMPLATES_DIR/prompts/critic.md" ./prompts/critic.template.md
 cp "$TEMPLATES_DIR/prompts/synthesizer.md" ./prompts/synthesizer.template.md
-echo "  ✓ prompts/ (analyst, critic, synthesizer templates)"
+cp "$TEMPLATES_DIR/prompts/judge.md" ./prompts/judge.template.md
+echo "  ✓ prompts/ (analyst, critic, synthesizer, judge templates)"
 
 # Git add the structure
 if git rev-parse --git-dir > /dev/null 2>&1; then
