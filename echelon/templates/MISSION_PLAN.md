@@ -10,50 +10,81 @@ Started: [ISO TIMESTAMP]
 
 Each task has a unique ID, assigned echelon, model tier, inputs, output, required
 sections, dependencies, and a completion flag. The CO reads this file every loop
-iteration and updates only the `passes` field. No other field changes during a session.
+iteration and updates only the `passes` field. No other field changes during execution.
+
+Tasks at the same dependency level are dispatched in parallel. Design your task graph
+so that independent work runs simultaneously. The CO dispatches ALL ready tasks in
+one response — wall-clock time is max(slowest task), not sum of all tasks.
 
 ```yaml
-# Example task entry — replace with actual mission tasks
+# ===========================================================================
+# EXAMPLE: XO-MANAGED PHASE (Sonnet XO manages parallel Haiku workers)
+# Use this pattern for high-volume parallel work.
+# ===========================================================================
 
-- id: ingest_source_01
+- id: phase_1_ingest
   phase: 1
-  echelon: analyst
-  model_tier: haiku
-  task: "Ingest source document 01. Extract all claims, evidence chains, and methodology."
+  echelon: xo                      # Sonnet XO — spawns haiku workers internally
+  model_tier: sonnet
+  task: "Manage parallel ingestion of all 10 source documents"
   input_files:
-    - inputs/source_01.md
-  output_file: analysis/source_01_map.md
+    - inputs/
+  output_file: sitreps/phase_1_ingest.md   # XO writes SITREP here
   required_sections:
-    - claims
-    - evidence
-    - methodology
-    - gaps
+    - status
+    - completed
+    - failed
   depends_on: []
   passes: false
 
-- id: critique_source_01
+# Phase 2a and 2b have no inter-dependency — CO dispatches both simultaneously.
+# Each gets its own Sonnet XO. Both XO pools run concurrently.
+
+- id: phase_2a_critique
   phase: 2
-  echelon: critic
+  echelon: xo
   model_tier: sonnet
-  task: "Critique the analysis of source 01. Identify logic gaps, unsupported claims, missing evidence."
+  task: "Critique all analysis maps for logical validity"
   input_files:
-    - analysis/source_01_map.md
-  output_file: critique/source_01_critique.md
+    - analysis/
+  output_file: sitreps/phase_2a_critique.md
   required_sections:
-    - logic_gaps
-    - unsupported_claims
-    - verdict
+    - status
+    - completed
+    - failed
   depends_on:
-    - ingest_source_01
+    - phase_1_ingest
   passes: false
+
+- id: phase_2b_verify_citations
+  phase: 2
+  echelon: xo
+  model_tier: sonnet
+  task: "Verify all citations and evidence chains across all sources"
+  input_files:
+    - analysis/
+  output_file: sitreps/phase_2b_verify.md
+  required_sections:
+    - status
+    - completed
+    - failed
+  depends_on:
+    - phase_1_ingest
+  passes: false
+
+# ===========================================================================
+# EXAMPLE: DIRECT TASK (flat dispatch, backward compatible)
+# Use this for single high-stakes tasks that don't benefit from worker pools.
+# ===========================================================================
 
 - id: synthesize_all
   phase: 3
-  echelon: synthesizer
+  echelon: synthesizer              # Direct to Sonnet — no XO needed for one task
   model_tier: sonnet
-  task: "Synthesize all source analyses. Identify cross-document connections, contradictions, and emergent themes."
+  task: "Synthesize all analyses. Cross-document connections, contradictions, themes."
   input_files:
-    - analysis/source_01_map.md
+    - analysis/
+    - critique/
   output_file: synthesis/full_synthesis.md
   required_sections:
     - connections
@@ -61,14 +92,15 @@ iteration and updates only the `passes` field. No other field changes during a s
     - themes
     - conclusions
   depends_on:
-    - critique_source_01
+    - phase_2a_critique
+    - phase_2b_verify_citations
   passes: false
 
 - id: judge_final
   phase: 4
-  echelon: judge
+  echelon: judge                    # Direct to Opus — final gate
   model_tier: opus
-  task: "Peer review the synthesis. Verdict: APPROVED or NEEDS_WORK with specific objections."
+  task: "Peer review the synthesis. Verdict: APPROVED or NEEDS_WORK."
   input_files:
     - synthesis/full_synthesis.md
   output_file: judge/final_verdict.md
@@ -82,9 +114,33 @@ iteration and updates only the `passes` field. No other field changes during a s
 
 ---
 
+## Schema Reference
+
+```yaml
+- id: [unique_task_id]
+  phase: [number]                              # for human reference
+  echelon: [xo|analyst|critic|synthesizer|judge]
+  model_tier: [haiku|sonnet|opus]
+  task: "Description of work"
+  input_files: [array of paths]
+  output_file: path/to/output.md
+  required_sections: [array of section names]
+  depends_on: [array of task_ids or empty]
+  passes: false                                # CO updates this to true after verification
+```
+
+**`echelon: xo`** — Dispatches to a Sonnet XO that manages its own parallel Haiku
+worker pool. XO output is always a SITREP at `output_file`. Use for any phase with
+multiple parallel workers.
+
+**All other echelons** — Dispatched directly by the CO to a single agent. Use for
+single tasks (synthesis, judgment) that don't parallelize.
+
+---
+
 ## Notes
 
 - `passes: false` → task not yet complete
 - `passes: true` → CO has verified output and committed
-- Tasks dispatch in dependency order (check `depends_on` before dispatching)
+- The CO dispatches ALL tasks whose dependencies are met simultaneously
 - Replace the example tasks above with tasks generated for your actual mission
