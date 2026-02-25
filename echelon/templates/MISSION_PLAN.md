@@ -18,7 +18,7 @@ iteration and updates only the `passes` field. No other field changes during a s
 - id: ingest_source_01
   phase: 1
   echelon: analyst
-  model_tier: mercury
+  model_tier: haiku
   task: "Ingest source document 01. Extract all claims, evidence chains, and methodology."
   input_files:
     - inputs/source_01.md

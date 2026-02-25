@@ -1,7 +1,7 @@
 ---
 task_id: TASK_ID_PLACEHOLDER
 echelon: analyst
-model_tier: mercury
+model_tier: haiku
 input_files:
   - inputs/PLACEHOLDER.md
 output_file: analysis/PLACEHOLDER_map.md

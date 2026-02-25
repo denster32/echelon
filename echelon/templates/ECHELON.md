@@ -51,7 +51,6 @@ For every task in MISSION_PLAN.md where `passes: false`:
 1. Check `depends_on` — all dependencies must have `passes: true` first
 2. Read `prompts/[task_id].md` — this is the pre-written agent prompt
 3. Spawn a Task subagent with that prompt content
-   - `model_tier: mercury` → run `echelon/scripts/run-mercury.sh --prompt-file prompts/[task_id].md --output [output_file]`
    - `model_tier: haiku` → spawn Task agent (model: haiku)
    - `model_tier: sonnet` → spawn Task agent (model: sonnet)
    - `model_tier: opus` → spawn Task agent (model: opus)
@@ -125,7 +124,7 @@ If a task fails 3 times:
 
 | Task type      | Model tier | Dispatch method                                      |
 |----------------|------------|------------------------------------------------------|
-| ingest, verify, write (high volume) | mercury | `run-mercury.sh --prompt-file ... --output ...` |
+| ingest, verify, write (high volume) | haiku   | Task agent, model: haiku                        |
 | analysis, critique (reasoning)      | sonnet  | Task agent, model: sonnet                       |
 | synthesis, cross-reference          | sonnet  | Task agent, model: sonnet                       |
 | judgment, peer review gate          | opus    | Task agent, model: opus                         |
